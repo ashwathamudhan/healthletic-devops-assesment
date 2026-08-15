@@ -148,14 +148,18 @@ jobs:
       - name: Check pod readiness
         shell: cmd
         run: |
-          echo Waiting for backend pod...
+          echo Waiting for backend deployment...
 
-          kubectl wait ^
+          kubectl rollout status deployment/healthletic-backend-backend ^
             --namespace healthletic ^
-            --for=condition=ready ^
-            pod ^
-            --selector=app.kubernetes.io/instance=healthletic-backend ^
             --timeout=180s
+
+          if errorlevel 1 (
+            echo Backend deployment is not ready
+            exit /b 1
+          )
+
+          echo Backend deployment is READY
 
       - name: Start port forward
         shell: cmd
@@ -189,9 +193,14 @@ jobs:
           echo DATABASE SMOKE TEST
           echo ==============================
 
-          for /f "delims=" %%P in ('kubectl get pods -n healthletic -l app.kubernetes.io/instance=healthletic-backend -o jsonpath="{.items[0].metadata.name}"') do set POD=%%P
+          for /f "delims=" %%P in ('kubectl get pods -n healthletic -l app=healthletic-backend -o jsonpath="{.items[0].metadata.name}"') do set POD=%%P
 
           echo Testing database in pod: %POD%
+
+          if "%POD%"=="" (
+            echo No backend pod found
+            exit /b 1
+          )
 
           kubectl exec %POD% -n healthletic -- python -c "import sqlite3,os; db=os.getenv('DATABASE_PATH','healthletic.db'); c=sqlite3.connect(db); c.execute('SELECT 1'); c.close(); print('DATABASE OK')"
 
