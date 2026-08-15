@@ -145,33 +145,104 @@ The final GitHub Actions run successfully completed:
 
 ## 📸 Project Evidence
 
-### GitHub Actions — Successful CI/CD
+The following screenshots show the actual implementation, deployment, testing, and verification completed during this project.
 
-![CI/CD](docs/screenshots/api-database-smoke-test.png)
+### 🔄 GitHub Actions CI/CD
 
-### Kubernetes Deployment
+![GitHub Actions CI/CD](<output images/CICD check.png>)
 
-![Kubernetes](docs/screenshots/kubernetes-status.png)
+The GitHub Actions workflow automatically builds the Docker image and deploys the application to Kubernetes.  
+The final pipeline completed successfully with all major deployment and verification steps passing.
 
-### Kubernetes Pods & Services
+---
 
-![Kubernetes verification](docs/screenshots/kubernetes-status-detail.png)
+### 🐳 Docker Container
 
-### Docker & Helm
+![Docker Container](<output images/docker container check.png>)
 
-![Docker and Helm](docs/screenshots/docker-helm-deployment.png)
+The backend application was successfully packaged and executed as a Docker container.  
+This helped create a consistent environment for running the application locally and in Kubernetes.
 
-### Helm / Kubernetes Verification
+---
 
-![Helm verification](docs/screenshots/helm-kubernetes-verification.png)
+### 🐳 Docker Images
 
-### Application Health Logs
+![Docker Images](<output images/docker images check.png>)
 
-![API logs](docs/screenshots/api-logs-and-pods.png)
+The application Docker images were built and tagged with version numbers.  
+The images were also pushed to Docker Hub for use during Kubernetes deployment.
 
-### Docker Hub
+---
 
-![Docker Hub](docs/screenshots/docker-hub-images.png)
+### ☸️ Kubernetes Deployment
+
+![Kubernetes Deployment](<output images/deploy to kuber.png>)
+
+The Healthletic backend was deployed to a local Kubernetes cluster using Helm.  
+The deployment was verified by checking pods, services, and deployment status.
+
+---
+
+### ☸️ Kubernetes Pods & Services
+
+![Kubernetes Pods and Services](<output images/Screenshot 2026-08-15 161431.png>)
+
+The Kubernetes pods were running successfully with `1/1` containers ready.  
+The backend service was available inside the `healthletic` namespace on port `5000`.
+
+---
+
+### ⎈ Helm Deployment
+
+![Helm Deployment](<output images/Screenshot 2026-08-15 161529.png>)
+
+Helm was used to install and upgrade the Healthletic backend deployment.  
+Helm release revisions were checked to confirm successful deployments.
+
+---
+
+### 🔍 Kubernetes Verification
+
+![Kubernetes Verification](<output images/Screenshot 2026-08-15 162252.png>)
+
+Kubernetes resources were verified using commands such as `kubectl get pods`, `kubectl get deployment`, and `kubectl get service`.  
+The application remained in a healthy `Running` state without pod restarts.
+
+---
+
+### ❤️ API Health Check
+
+![API Health Check](<output images/moke tet Screenshot 2026-08-15 164637.png>)
+
+The `/health` endpoint was tested after deployment using `curl`.  
+The API returned HTTP `200` with a healthy application status.
+
+---
+
+### 🗄️ Database Smoke Test
+
+![Database Smoke Test](<output images/Database check.png>)
+
+The SQLite database was tested from inside the running Kubernetes pod.  
+The query returned `DATABASE OK`, confirming that database access was working.
+
+---
+
+### 📊 Application Logs
+
+![Application Logs](<output images/Screenshot 2026-08-15 165537.png>)
+
+Application logs show successful requests to the `/health` endpoint.  
+The HTTP `200` responses confirm that the deployed backend was responding correctly.
+
+---
+
+### 🐳 Docker Hub
+
+![Docker Hub](<output images/Screenshot 2026-08-15 220826.png>)
+
+The Docker image was published to Docker Hub with versioned tags.  
+This image was used as the container image for the Kubernetes deployment.
 
 ## 👨‍💻 About Me
 
