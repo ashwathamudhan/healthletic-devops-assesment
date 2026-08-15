@@ -85,147 +85,153 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Verify Kubernetes access
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Host "Checking Kubernetes context..."
+          echo Checking Kubernetes context...
           kubectl config current-context
 
-          Write-Host "Checking Kubernetes nodes..."
+          echo Checking Kubernetes nodes...
           kubectl get nodes
 
       - name: Verify Helm
-        shell: powershell
+        shell: cmd
         run: |
+          echo Checking Helm...
           helm version
 
       - name: Validate Helm chart
-        shell: powershell
+        shell: cmd
         run: |
-          helm lint .\helm\backend
+          echo Validating Helm chart...
+          helm lint helm\backend
 
       - name: Generate deployment version
-        id: version
-        shell: powershell
+        shell: cmd
         run: |
-          $VERSION = "v1.0.$env:GITHUB_RUN_NUMBER"
-
-          "version=$VERSION" >> $env:GITHUB_OUTPUT
-
-          Write-Host "Deploying version: $VERSION"
+          echo Deploying version v1.0.%GITHUB_RUN_NUMBER%
 
       - name: Deploy application with Helm
-        shell: powershell
+        shell: cmd
         run: |
-          $VERSION = "${{ steps.version.outputs.version }}"
+          echo Deploying Healthletic backend...
 
-          Write-Host "Deploying image:"
-          Write-Host "${{ env.IMAGE_NAME }}:$VERSION"
-
-          helm upgrade --install healthletic-backend .\helm\backend `
-            --namespace healthletic `
-            --create-namespace `
-            --set image.repository="${{ env.IMAGE_NAME }}" `
-            --set image.tag="$VERSION" `
-            --wait `
-            --atomic `
+          helm upgrade --install healthletic-backend helm\backend ^
+            --namespace healthletic ^
+            --create-namespace ^
+            --set image.repository=%IMAGE_NAME% ^
+            --set image.tag=v1.0.%GITHUB_RUN_NUMBER% ^
+            --wait ^
+            --atomic ^
             --timeout 5m
 
       - name: Verify deployment
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Host "Deployment:"
+          echo ==============================
+          echo DEPLOYMENT
+          echo ==============================
+
           kubectl get deployment -n healthletic
 
-          Write-Host "Pods:"
+          echo ==============================
+          echo PODS
+          echo ==============================
+
           kubectl get pods -n healthletic
 
-          Write-Host "Services:"
+          echo ==============================
+          echo SERVICES
+          echo ==============================
+
           kubectl get services -n healthletic
 
       - name: Check pod readiness
-        shell: powershell
+        shell: cmd
         run: |
-          kubectl wait `
-            --namespace healthletic `
-            --for=condition=ready `
-            pod `
-            --selector=app.kubernetes.io/instance=healthletic-backend `
+          echo Waiting for backend pod...
+
+          kubectl wait ^
+            --namespace healthletic ^
+            --for=condition=ready ^
+            pod ^
+            --selector=app.kubernetes.io/instance=healthletic-backend ^
             --timeout=180s
 
       - name: Start port forward
-        shell: powershell
+        shell: cmd
         run: |
-          Start-Process `
-            -FilePath "kubectl" `
-            -ArgumentList "port-forward service/healthletic-backend 18080:5000 -n healthletic" `
-            -WindowStyle Hidden
+          echo Starting port forwarding...
 
-          Start-Sleep -Seconds 5
+          start "" /B kubectl port-forward service/healthletic-backend 18080:5000 -n healthletic
+
+          timeout /t 5 /nobreak
 
       - name: Smoke test API
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Host "Testing Flask API..."
+          echo ==============================
+          echo API SMOKE TEST
+          echo ==============================
 
-          $response = Invoke-WebRequest `
-            -Uri "http://localhost:18080/" `
-            -UseBasicParsing `
-            -TimeoutSec 20
+          curl.exe -f http://localhost:18080/
 
-          Write-Host "HTTP Status: $($response.StatusCode)"
+          if errorlevel 1 (
+            echo API smoke test FAILED
+            exit /b 1
+          )
 
-          if ($response.StatusCode -ne 200) {
-            throw "API smoke test failed"
-          }
-
-          Write-Host "API smoke test PASSED"
+          echo API smoke test PASSED
 
       - name: Smoke test database
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Host "Testing database..."
+          echo ==============================
+          echo DATABASE SMOKE TEST
+          echo ==============================
 
-          $POD = kubectl get pods `
-            -n healthletic `
-            -l app.kubernetes.io/instance=healthletic-backend `
-            -o jsonpath="{.items[0].metadata.name}"
+          for /f "delims=" %%P in ('kubectl get pods -n healthletic -l app.kubernetes.io/instance=healthletic-backend -o jsonpath="{.items[0].metadata.name}"') do set POD=%%P
 
-          if (-not $POD) {
-            throw "Backend pod not found"
-          }
+          echo Testing database in pod: %POD%
 
-          Write-Host "Testing database in pod: $POD"
+          kubectl exec %POD% -n healthletic -- python -c "import sqlite3,os; db=os.getenv('DATABASE_PATH','healthletic.db'); c=sqlite3.connect(db); c.execute('SELECT 1'); c.close(); print('DATABASE OK')"
 
-          kubectl exec $POD -n healthletic -- `
-            python -c "import sqlite3, os; db=os.getenv('DATABASE_PATH','healthletic.db'); c=sqlite3.connect(db); c.execute('SELECT 1'); c.close(); print('DATABASE OK')"
+          if errorlevel 1 (
+            echo DATABASE smoke test FAILED
+            exit /b 1
+          )
+
+          echo DATABASE smoke test PASSED
 
       - name: Deployment verification
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Host "Final deployment status:"
+          echo ==============================
+          echo FINAL HELM STATUS
+          echo ==============================
+
           helm status healthletic-backend -n healthletic
 
-          Write-Host "Final pods:"
+          echo ==============================
+          echo FINAL POD STATUS
+          echo ==============================
+
           kubectl get pods -n healthletic
 
-      # ========================================================
-      # ROLLBACK IF ANY PREVIOUS STEP FAILED
-      # ========================================================
       - name: Rollback on failure
         if: failure()
         shell: cmd
         run: |
           echo ========================================
           echo DEPLOYMENT OR SMOKE TEST FAILED
-          echo Starting Helm rollback...
+          echo STARTING HELM ROLLBACK
           echo ========================================
 
           helm rollback healthletic-backend 0 --namespace healthletic --wait --timeout 5m
 
-          echo Rollback completed.
+          echo ========================================
+          echo ROLLBACK COMPLETED
+          echo ========================================
 
-          echo Current Helm status:
           helm status healthletic-backend --namespace healthletic
 
-          echo Current pods:
           kubectl get pods --namespace healthletic
