@@ -202,7 +202,7 @@ jobs:
 
           echo Finding backend pod...
 
-          for /f "delims=" %%P in ('kubectl get pods -n healthletic -l app=healthletic-backend -o jsonpath^="{.items[0].metadata.name}"') do set POD_NAME=%%P
+          for /f "delims=" %%P in ('kubectl get pods -n healthletic -o jsonpath^="{.items[0].metadata.name}"') do set POD_NAME=%%P
 
           echo Backend pod: %POD_NAME%
 
