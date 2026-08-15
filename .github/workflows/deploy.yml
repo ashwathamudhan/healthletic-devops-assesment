@@ -65,7 +65,7 @@ jobs:
 
   runner-test:
     name: Test Windows Kubernetes Runner
-    runs-on: [self-hosted, windows, x64, healthletic-k8s]
+    runs-on: [self-hosted, windows, x64]
 
     steps:
       - name: Check Docker
