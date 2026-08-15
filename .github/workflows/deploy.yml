@@ -162,22 +162,32 @@ jobs:
           echo Backend deployment is READY
 
       - name: Start port forward
-        shell: cmd
+        shell: powershell
         run: |
-          echo Starting port forwarding...
+          Write-Host "Starting port forwarding..."
 
-          start "" /B kubectl port-forward service/healthletic-backend 18081:5000 -n healthletic
+          $process = Start-Process `
+            -FilePath "kubectl.exe" `
+            -ArgumentList "port-forward service/healthletic-backend 18081:5000 -n healthletic" `
+            -PassThru `
+            -WindowStyle Hidden
 
-          timeout /t 5 /nobreak
+          Start-Sleep -Seconds 5
 
+          if ($process.HasExited) {
+            Write-Host "Port-forward process exited unexpectedly."
+            exit 1
+          }
+
+          Write-Host "Port-forward started successfully. PID: $($process.Id)"
       - name: Smoke test API
-        shell: cmd
+        shell: powershell
         run: |
           echo ==============================
           echo API SMOKE TEST
           echo ==============================
 
-          curl.exe -f http://localhost:18081/
+          curl.exe -f http://127.0.0.1:18081/health
 
           if errorlevel 1 (
             echo API smoke test FAILED
