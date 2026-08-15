@@ -62,24 +62,23 @@ jobs:
                     "${IMAGE_NAME}:latest"
 
                   docker push "${IMAGE_NAME}:latest"cl
+  runner-test:
+    name: Test Windows Kubernetes Runner
+    runs-on: [self-hosted, windows, x64]
 
-    runner-test:
-        name: Test Windows Kubernetes Runner
-        runs-on: [self-hosted, windows, x64]
+    steps:
+      - name: Check Docker
+        shell: cmd
+        run: docker --version
 
-        steps:
-            - name: Check Docker
-              shell: powershell
-              run: docker --version
+      - name: Check kubectl
+        shell: cmd
+        run: kubectl version --client
 
-            - name: Check kubectl
-              shell: powershell
-              run: kubectl version --client
+      - name: Check Helm
+        shell: cmd
+        run: helm version
 
-            - name: Check Helm
-              shell: powershell
-              run: helm version
-
-            - name: Check Kubernetes
-              shell: powershell
-              run: kubectl get nodes
+      - name: Check Kubernetes
+        shell: cmd
+        run: kubectl get nodes
