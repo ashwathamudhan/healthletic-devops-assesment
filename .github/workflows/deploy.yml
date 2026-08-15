@@ -166,7 +166,7 @@ jobs:
         run: |
           echo Starting port forwarding...
 
-          start "" /B kubectl port-forward service/healthletic-backend 18080:5000 -n healthletic
+          start "" /B kubectl port-forward service/healthletic-backend 18081:5000 -n healthletic
 
           timeout /t 5 /nobreak
 
@@ -177,7 +177,7 @@ jobs:
           echo API SMOKE TEST
           echo ==============================
 
-          curl.exe -f http://localhost:18080/
+          curl.exe -f http://localhost:18081/
 
           if errorlevel 1 (
             echo API smoke test FAILED
