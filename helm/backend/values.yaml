@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: ashwathamudhan/healthletic-backend
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5000
+  targetPort: 5000
+
+containerPort: 5000
+
+app:
+  version: "v1.0.0"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

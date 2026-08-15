@@ -1,0 +1,21 @@
+apiVersion: v1
+
+kind: Service
+
+metadata:
+  name: {{ .Release.Name }}-backend
+
+  labels:
+    app: healthletic-backend
+
+spec:
+  type: {{ .Values.service.type }}
+
+  selector:
+    app: healthletic-backend
+
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
