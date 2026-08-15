@@ -164,22 +164,14 @@ jobs:
       - name: Start port forward
         shell: cmd
         run: |
-          Write-Host "Starting port forwarding..."
+          echo Starting port forwarding...
 
-          $process = Start-Process `
-            -FilePath "kubectl.exe" `
-            -ArgumentList "port-forward service/healthletic-backend 18081:5000 -n healthletic" `
-            -PassThru `
-            -WindowStyle Hidden
+          start "" /b cmd /c "kubectl port-forward service/healthletic-backend 18081:5000 -n healthletic > port-forward.log 2>&1"
 
-          Start-Sleep -Seconds 5
+          timeout /t 5 /nobreak
 
-          if ($process.HasExited) {
-            Write-Host "Port-forward process exited unexpectedly."
-            exit 1
-          }
-
-          Write-Host "Port-forward started successfully. PID: $($process.Id)"
+          echo Port-forward process started.
+          type port-forward.log
       - name: Smoke test API
         shell: cmd
         run: |
@@ -187,7 +179,7 @@ jobs:
           echo API SMOKE TEST
           echo ==============================
 
-          curl.exe -f http://127.0.0.1:18081/health
+          curl.exe --fail http://127.0.0.1:18081/health
 
           if errorlevel 1 (
             echo API smoke test FAILED
@@ -195,7 +187,6 @@ jobs:
           )
 
           echo API smoke test PASSED
-
       - name: Smoke test database
         shell: cmd
         run: |
