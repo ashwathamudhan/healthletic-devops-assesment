@@ -162,7 +162,7 @@ jobs:
           echo Backend deployment is READY
 
       - name: Start port forward
-        shell: powershell
+        shell: cmd
         run: |
           Write-Host "Starting port forwarding..."
 
@@ -181,7 +181,7 @@ jobs:
 
           Write-Host "Port-forward started successfully. PID: $($process.Id)"
       - name: Smoke test API
-        shell: powershell
+        shell: cmd
         run: |
           echo ==============================
           echo API SMOKE TEST
