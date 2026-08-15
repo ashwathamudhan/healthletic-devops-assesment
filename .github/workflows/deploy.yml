@@ -200,23 +200,29 @@ jobs:
           echo DATABASE SMOKE TEST
           echo ==============================
 
-          for /f "delims=" %%P in ('kubectl get pods -n healthletic -l app=healthletic-backend -o jsonpath="{.items[0].metadata.name}"') do set POD=%%P
+          echo Finding backend pod...
 
-          echo Testing database in pod: %POD%
+          for /f "delims=" %%P in ('kubectl get pods -n healthletic -l app=healthletic-backend -o jsonpath^="{.items[0].metadata.name}"') do set POD_NAME=%%P
 
-          if "%POD%"=="" (
+          echo Backend pod: %POD_NAME%
+
+          if "%POD_NAME%"=="" (
             echo No backend pod found
             exit /b 1
           )
 
-          kubectl exec %POD% -n healthletic -- python -c "import sqlite3,os; db=os.getenv('DATABASE_PATH','healthletic.db'); c=sqlite3.connect(db); c.execute('SELECT 1'); c.close(); print('DATABASE OK')"
+          echo ==============================
+          echo TESTING SQLITE DATABASE
+          echo ==============================
+
+          kubectl exec -n healthletic %POD_NAME% -- python -c "import sqlite3; c=sqlite3.connect('healthletic.db'); c.execute('SELECT 1'); print('DATABASE OK'); c.close()"
 
           if errorlevel 1 (
-            echo DATABASE smoke test FAILED
+            echo Database smoke test FAILED
             exit /b 1
           )
 
-          echo DATABASE smoke test PASSED
+          echo DATABASE SMOKE TEST PASSED
 
       - name: Deployment verification
         shell: cmd
