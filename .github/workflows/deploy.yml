@@ -161,20 +161,23 @@ jobs:
 
           echo Backend deployment is READY
 
-      - name: Start port forward
+      - name: Smoke test API
         shell: cmd
         run: |
-          echo Starting port forwarding...
+          echo ==============================
+          echo STARTING PORT FORWARD
+          echo ==============================
 
           start "" /b cmd /c "kubectl port-forward service/healthletic-backend 18081:5000 -n healthletic > port-forward.log 2>&1"
 
           timeout /t 5 /nobreak
 
-          echo Port-forward process started.
+          echo ==============================
+          echo PORT FORWARD LOG
+          echo ==============================
+
           type port-forward.log
-      - name: Smoke test API
-        shell: cmd
-        run: |
+
           echo ==============================
           echo API SMOKE TEST
           echo ==============================
@@ -183,10 +186,13 @@ jobs:
 
           if errorlevel 1 (
             echo API smoke test FAILED
+            taskkill /F /IM kubectl.exe >nul 2>&1
             exit /b 1
           )
 
           echo API smoke test PASSED
+
+          taskkill /F /IM kubectl.exe >nul 2>&1
       - name: Smoke test database
         shell: cmd
         run: |
