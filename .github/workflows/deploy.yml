@@ -62,3 +62,24 @@ jobs:
             "${IMAGE_NAME}:latest"
 
           docker push "${IMAGE_NAME}:latest"cl
+
+  runner-test:
+    name: Test Windows Kubernetes Runner
+    runs-on: [self-hosted, windows, x64, healthletic-k8s]
+
+    steps:
+      - name: Check Docker
+        shell: powershell
+        run: docker --version
+
+      - name: Check kubectl
+        shell: powershell
+        run: kubectl version --client
+
+      - name: Check Helm
+        shell: powershell
+        run: helm version
+
+      - name: Check Kubernetes
+        shell: powershell
+        run: kubectl get nodes
