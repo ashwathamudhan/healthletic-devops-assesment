@@ -8,3 +8,18 @@ on:
     pull_request:
         branches:
             - main
+
+jobs:
+    test:
+        name: Test Workflow
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Show project files
+              run: |
+                  echo "Healthletic CI/CD pipeline started"
+                  echo "Repository contents:"
+                  ls -la
