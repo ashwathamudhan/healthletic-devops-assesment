@@ -79,7 +79,10 @@ jobs:
       - name: Check Helm
         shell: cmd
         run: helm version
-
       - name: Check Kubernetes
         shell: cmd
-        run: kubectl get nodes
+        env:
+          KUBECONFIG: C:\Users\Ashwath Amudhan C A\.kube\config
+        run: |
+          kubectl config current-context
+          kubectl get nodes
