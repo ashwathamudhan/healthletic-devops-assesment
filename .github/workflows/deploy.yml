@@ -257,3 +257,5 @@ jobs:
           helm status healthletic-backend --namespace healthletic
 
           kubectl get pods --namespace healthletic
+kkk
+
