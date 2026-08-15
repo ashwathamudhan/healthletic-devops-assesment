@@ -9,17 +9,27 @@ on:
         branches:
             - main
 
+env:
+    IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/healthletic-backend
+
 jobs:
-    test:
-        name: Test Workflow
+    build:
+        name: Build Docker Image
         runs-on: ubuntu-latest
 
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
 
-            - name: Show project files
+            - name: Generate semantic version
+              id: version
               run: |
-                  echo "Healthletic CI/CD pipeline started"
-                  echo "Repository contents:"
-                  ls -la
+                  VERSION="v1.0.${GITHUB_RUN_NUMBER}"
+                  echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+                  echo "Building version: ${VERSION}"
+
+            - name: Build Docker image
+              run: |
+                  docker build \
+                    -t "${IMAGE_NAME}:${{ steps.version.outputs.version }}" \
+                    .
