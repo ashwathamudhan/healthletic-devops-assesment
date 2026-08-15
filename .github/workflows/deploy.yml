@@ -213,22 +213,19 @@ jobs:
       # ========================================================
       - name: Rollback on failure
         if: failure()
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Host "========================================"
-          Write-Host "DEPLOYMENT OR SMOKE TEST FAILED"
-          Write-Host "Starting Helm rollback..."
-          Write-Host "========================================"
+          echo ========================================
+          echo DEPLOYMENT OR SMOKE TEST FAILED
+          echo Starting Helm rollback...
+          echo ========================================
 
-          helm rollback healthletic-backend 0 `
-            --namespace healthletic `
-            --wait `
-            --timeout 5m
+          helm rollback healthletic-backend 0 --namespace healthletic --wait --timeout 5m
 
-          Write-Host "Rollback completed."
+          echo Rollback completed.
 
-          Write-Host "Current Helm status:"
-          helm status healthletic-backend -n healthletic
+          echo Current Helm status:
+          helm status healthletic-backend --namespace healthletic
 
-          Write-Host "Current pods:"
-          kubectl get pods -n healthletic
+          echo Current pods:
+          kubectl get pods --namespace healthletic
