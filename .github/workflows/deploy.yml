@@ -13,6 +13,9 @@ env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/healthletic-backend
 
 jobs:
+  # ============================================================
+  # BUILD + SECURITY SCAN + DOCKER HUB PUSH
+  # ============================================================
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
@@ -41,7 +44,7 @@ jobs:
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: 0
+          exit-code: 1
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -63,26 +66,169 @@ jobs:
 
           docker push "${IMAGE_NAME}:latest"
 
-  runner-test:
-    name: Test Windows Kubernetes Runner
+  # ============================================================
+  # KUBERNETES DEPLOYMENT
+  # ============================================================
+  deploy:
+    name: Deploy to Kubernetes
     runs-on: [self-hosted, windows, x64]
 
+    needs: build
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    env:
+      KUBECONFIG: C:\actions-runner\kubeconfig
+
     steps:
-      - name: Check Docker
-        shell: cmd
-        run: docker --version
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check kubectl
-        shell: cmd
-        run: kubectl version --client
-
-      - name: Check Helm
-        shell: cmd
-        run: helm version
-      - name: Check Kubernetes
-        shell: cmd
-        env:
-          KUBECONFIG: C:\Users\Ashwath Amudhan C A\.kube\config
+      - name: Verify Kubernetes access
+        shell: powershell
         run: |
+          Write-Host "Checking Kubernetes context..."
           kubectl config current-context
+
+          Write-Host "Checking Kubernetes nodes..."
           kubectl get nodes
+
+      - name: Verify Helm
+        shell: powershell
+        run: |
+          helm version
+
+      - name: Validate Helm chart
+        shell: powershell
+        run: |
+          helm lint .\helm\backend
+
+      - name: Generate deployment version
+        id: version
+        shell: powershell
+        run: |
+          $VERSION = "v1.0.$env:GITHUB_RUN_NUMBER"
+
+          "version=$VERSION" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Deploying version: $VERSION"
+
+      - name: Deploy application with Helm
+        shell: powershell
+        run: |
+          $VERSION = "${{ steps.version.outputs.version }}"
+
+          Write-Host "Deploying image:"
+          Write-Host "${{ env.IMAGE_NAME }}:$VERSION"
+
+          helm upgrade --install healthletic-backend .\helm\backend `
+            --namespace healthletic `
+            --create-namespace `
+            --set image.repository="${{ env.IMAGE_NAME }}" `
+            --set image.tag="$VERSION" `
+            --wait `
+            --atomic `
+            --timeout 5m
+
+      - name: Verify deployment
+        shell: powershell
+        run: |
+          Write-Host "Deployment:"
+          kubectl get deployment -n healthletic
+
+          Write-Host "Pods:"
+          kubectl get pods -n healthletic
+
+          Write-Host "Services:"
+          kubectl get services -n healthletic
+
+      - name: Check pod readiness
+        shell: powershell
+        run: |
+          kubectl wait `
+            --namespace healthletic `
+            --for=condition=ready `
+            pod `
+            --selector=app.kubernetes.io/instance=healthletic-backend `
+            --timeout=180s
+
+      - name: Start port forward
+        shell: powershell
+        run: |
+          Start-Process `
+            -FilePath "kubectl" `
+            -ArgumentList "port-forward service/healthletic-backend 18080:5000 -n healthletic" `
+            -WindowStyle Hidden
+
+          Start-Sleep -Seconds 5
+
+      - name: Smoke test API
+        shell: powershell
+        run: |
+          Write-Host "Testing Flask API..."
+
+          $response = Invoke-WebRequest `
+            -Uri "http://localhost:18080/" `
+            -UseBasicParsing `
+            -TimeoutSec 20
+
+          Write-Host "HTTP Status: $($response.StatusCode)"
+
+          if ($response.StatusCode -ne 200) {
+            throw "API smoke test failed"
+          }
+
+          Write-Host "API smoke test PASSED"
+
+      - name: Smoke test database
+        shell: powershell
+        run: |
+          Write-Host "Testing database..."
+
+          $POD = kubectl get pods `
+            -n healthletic `
+            -l app.kubernetes.io/instance=healthletic-backend `
+            -o jsonpath="{.items[0].metadata.name}"
+
+          if (-not $POD) {
+            throw "Backend pod not found"
+          }
+
+          Write-Host "Testing database in pod: $POD"
+
+          kubectl exec $POD -n healthletic -- `
+            python -c "import sqlite3, os; db=os.getenv('DATABASE_PATH','healthletic.db'); c=sqlite3.connect(db); c.execute('SELECT 1'); c.close(); print('DATABASE OK')"
+
+      - name: Deployment verification
+        shell: powershell
+        run: |
+          Write-Host "Final deployment status:"
+          helm status healthletic-backend -n healthletic
+
+          Write-Host "Final pods:"
+          kubectl get pods -n healthletic
+
+      # ========================================================
+      # ROLLBACK IF ANY PREVIOUS STEP FAILED
+      # ========================================================
+      - name: Rollback on failure
+        if: failure()
+        shell: powershell
+        run: |
+          Write-Host "========================================"
+          Write-Host "DEPLOYMENT OR SMOKE TEST FAILED"
+          Write-Host "Starting Helm rollback..."
+          Write-Host "========================================"
+
+          helm rollback healthletic-backend 0 `
+            --namespace healthletic `
+            --wait `
+            --timeout 5m
+
+          Write-Host "Rollback completed."
+
+          Write-Host "Current Helm status:"
+          helm status healthletic-backend -n healthletic
+
+          Write-Host "Current pods:"
+          kubectl get pods -n healthletic
