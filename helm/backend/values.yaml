@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ashwathamudhan/healthletic-backend
-  tag: "v1.0.0"
+  tag: "v1.0.1"
   pullPolicy: IfNotPresent
 
 service:
@@ -13,7 +13,7 @@ service:
 containerPort: 5000
 
 app:
-  version: "v1.0.0"
+  version: "v1.0.1"
 
 resources:
   requests:
